@@ -1,12 +1,10 @@
 Role: Act as a Senior Cloud Architect and Technical Writer.
 
-Header Section: Amazon EC2 Lifecycle Management Project
-
 Objective: Transform the provided raw technical steps into a high-level, production-ready GitHub README. The documentation should be structured for both developers and stakeholders, emphasizing scalability, reliability, and professional problem-solving.
 
 Required Structure:
 
-Project Title: (As provided in the header)
+Project Title: Put according to the Lab instructions
 
 Project Overview: A concise explanation of the business problem this project solves and the chosen technical solution.
 
