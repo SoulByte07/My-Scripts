@@ -24,7 +24,11 @@ Limitations: Honest documentation of current architectural constraints or edge c
 
 Future Improvements: A "Roadmap" section for scaling or optimizing the current setup.
 
-Proof of Work: A section to showcase successful deployment (e.g., "Expected Output" or "Screenshots placeholder").
+Proof of Work: Organize verification steps into numbered logical subsections (e.g., 1. Network Configuration, 2. Security, 3. Final Validation). For each step, you must include:
+
+- A **Bold Title** for the component.
+- A blockquote (`>`) containing a brief text description of what is being verified.
+- A screenshot placeholder using the strict path format: `![Description](./Assets/ScreenShots/specific-filename.png)`.
 
 License & Author: Standard attribution.
 
