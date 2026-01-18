@@ -7,9 +7,11 @@ LOG_DIR="$HOME/2_Resources/97_Logs/rclone"
 DATE=$(date +%Y-%m-%d_%H-%M-%S)
 LOG_FILE="$LOG_DIR/$DATE.log"
 
+# --- Safety Check ---
+# Create the log directory if it doesn't exist
+mkdir -p "$LOG_DIR"
+
 # --- Rclone Command ---
-# We use 'sync' to make remote identical to local. 
-# If you don't want to delete files on the remote, change 'sync' to 'copy'.
 rclone sync "$SOURCE" "$REMOTE" \
     --create-empty-src-dirs \
     --log-file="$LOG_FILE" \
@@ -17,4 +19,3 @@ rclone sync "$SOURCE" "$REMOTE" \
     --progress
 
 echo "Sync complete. Log saved to $LOG_FILE"
-
