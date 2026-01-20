@@ -12,7 +12,7 @@ LOG_FILE="$LOG_DIR/$DATE.log"
 mkdir -p "$LOG_DIR"
 
 # --- Rclone Command ---
-rclone sync "$SOURCE" "$REMOTE" \
+rclone copy "$SOURCE" "$REMOTE" \
     --create-empty-src-dirs \
     --log-file="$LOG_FILE" \
     --log-level INFO \
