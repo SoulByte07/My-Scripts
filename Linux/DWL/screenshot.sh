@@ -9,11 +9,9 @@ filename="$save_dir/screenshot_$(date +%Y%m%d_%H%M%S).png"
 # Clear out the old log file for a fresh start
 > "$log_file"
 
-# Define the menu options (Removed 'Window')
 options="Region\nFull\nTimer 5 sec\nTimer 10 sec"
 
 # Display options in tofi and store the user's selection
-# Note: --num-results changed to 4
 choice=$(echo -e "$options" | tofi \
     --prompt-text "ScreenShot: " \
     --num-results 4 \
