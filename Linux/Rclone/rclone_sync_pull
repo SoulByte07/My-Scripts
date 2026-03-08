@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# --- Configuration ---
+# 1. Define DATE first so TRASH_DIR can use it
+DATE=$(date +%d-%b-%m-%y_%H-%M)
+
+# 2. Paths
+SOURCE="$HOME/4_Backups/0_Sync"
+REMOTE="EncryptGoogleDrive:0_Sync"
+TRASH_DIR="$HOME/4_Backups/96_Trash/0_Sync/$DATE"
+LOG_DIR="$HOME/2_Resources/97_Logs/rclone"
+LOG_FILE="$LOG_DIR/$DATE.log"
+
+# --- Safety Check ---
+mkdir -p "$LOG_DIR"
+mkdir -p "$TRASH_DIR" # Create trash dir locally
+
+# --- Rclone Command ---
+# Direction: REMOTE (Cloud) -> SOURCE (Laptop)
+# If a file is on Laptop but NOT on Cloud, it moves to TRASH_DIR
+rclone sync "$REMOTE" "$SOURCE" \
+    --fast-list \
+    --backup-dir "$TRASH_DIR" \
+    --create-empty-src-dirs \
+    --log-file="$LOG_FILE" \
+    --log-level INFO \
+    --max-delete 50 \
+    --use-mmap \
+    --progress
+
+echo "Sync complete. Log saved to $LOG_FILE"

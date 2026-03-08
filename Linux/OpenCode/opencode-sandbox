@@ -1,0 +1,160 @@
+#!/bin/bash
+# opencode-sandbox - Run OpenCode in a sandboxed environment
+# Restricts filesystem access to current directory + config/data dirs
+# 
+# Usage: opencode-sandbox [opencode arguments...]
+#
+# Permissions:
+#   - Current directory ($PWD): Read-Write
+#   - ~/.config/opencode/: Read-Only
+#   - ~/.local/share/opencode/: Read-Write (for logs, auth, storage)
+#   - System directories: Read-Only
+#   - Network: Allowed (for API calls)
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check if bwrap is available
+if ! command -v bwrap &> /dev/null; then
+    echo -e "${RED}Error: bubblewrap (bwrap) is not installed${NC}"
+    echo "Install it with: sudo apt install bubblewrap"
+    exit 1
+fi
+
+# Check if opencode is available
+if ! command -v opencode &> /dev/null; then
+    echo -e "${RED}Error: opencode is not found in PATH${NC}"
+    exit 1
+fi
+
+OPENCODE_BIN=$(command -v opencode)
+CONFIG_DIR="$HOME/.config/opencode"
+DATA_DIR="$HOME/.local/share/opencode"
+
+# Ensure config and data directories exist
+mkdir -p "$CONFIG_DIR" "$DATA_DIR"
+
+# Build bwrap arguments
+BWRAP_ARGS=(
+    # System directories (read-only)
+    --ro-bind /usr /usr
+    --ro-bind /etc /etc
+    
+    # Handle /lib and /lib64 (may be symlinks or real directories)
+    --ro-bind /lib /lib
+)
+
+# Add /lib64 if it exists (common on 64-bit systems)
+if [[ -e /lib64 ]]; then
+    BWRAP_ARGS+=(--ro-bind /lib64 /lib64)
+fi
+
+# Add /bin and /sbin (may be symlinks to /usr/bin on some systems)
+if [[ -L /bin ]]; then
+    BWRAP_ARGS+=(--symlink usr/bin /bin)
+else
+    BWRAP_ARGS+=(--ro-bind /bin /bin)
+fi
+
+if [[ -L /sbin ]]; then
+    BWRAP_ARGS+=(--symlink usr/sbin /sbin)
+elif [[ -e /sbin ]]; then
+    BWRAP_ARGS+=(--ro-bind /sbin /sbin)
+fi
+
+BWRAP_ARGS+=(
+    # Device access (minimal)
+    --dev /dev
+    --dev-bind /dev/null /dev/null
+    --dev-bind /dev/zero /dev/zero
+    --dev-bind /dev/urandom /dev/urandom
+    
+    # Proc filesystem (needed for various operations)
+    --proc /proc
+    
+    # Private tmp directory
+    --tmpfs /tmp
+    
+    # Create home directory structure
+    --tmpfs "$HOME"
+    
+    # OpenCode config directory (read-only)
+    --ro-bind "$CONFIG_DIR" "$CONFIG_DIR"
+    
+    # OpenCode data directory (read-write for logs, auth, storage)
+    --bind "$DATA_DIR" "$DATA_DIR"
+    
+    # Current working directory (read-write)
+    --bind "$PWD" "$PWD"
+    
+    # Network access (required for API calls)
+    --share-net
+    
+    # Clean up sandbox when parent dies
+    --die-with-parent
+    
+    # Set working directory
+    --chdir "$PWD"
+    
+    # Unshare namespaces for isolation
+    --unshare-user-try
+    --unshare-pid
+    --unshare-uts
+    --unshare-cgroup-try
+)
+
+# Pass through essential environment variables
+ENV_VARS=(
+    HOME
+    USER
+    TERM
+    COLORTERM
+    LANG
+    LC_ALL
+    PATH
+    SHELL
+    XDG_CONFIG_HOME
+    XDG_DATA_HOME
+    XDG_CACHE_HOME
+    XDG_RUNTIME_DIR
+    # OpenCode specific env vars (if set)
+    OPENCODE_ENV
+    ANTHROPIC_API_KEY
+    OPENAI_API_KEY
+    OPENROUTER_API_KEY
+    GOOGLE_API_KEY
+    GEMINI_API_KEY
+    AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY
+    AWS_REGION
+    AZURE_OPENAI_API_KEY
+    AZURE_OPENAI_ENDPOINT
+)
+
+for var in "${ENV_VARS[@]}"; do
+    if [[ -v "$var" ]]; then
+        BWRAP_ARGS+=(--setenv "$var" "${!var}")
+    fi
+done
+
+# Print sandbox info (can be disabled with -q flag)
+if [[ "${1:-}" != "-q" && "${1:-}" != "--quiet" ]]; then
+    echo -e "${YELLOW}OpenCode Sandbox${NC}"
+    echo "  Working dir: $PWD (rw)"
+    echo "  Config:      $CONFIG_DIR (ro)"
+    echo "  Data:        $DATA_DIR (rw)"
+    echo ""
+fi
+
+# Remove quiet flag if present before passing to opencode
+OPENCODE_ARGS=("$@")
+if [[ "${1:-}" == "-q" || "${1:-}" == "--quiet" ]]; then
+    OPENCODE_ARGS=("${@:2}")
+fi
+
+# Run OpenCode in the sandbox
+exec bwrap "${BWRAP_ARGS[@]}" "$OPENCODE_BIN" "${OPENCODE_ARGS[@]}"
