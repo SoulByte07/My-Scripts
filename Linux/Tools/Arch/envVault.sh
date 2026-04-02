@@ -1,5 +1,10 @@
 #!/bin/bash
-# envVault.sh - Soul's Arch Secret Manager
+# Usage: 
+# place this script in your project root
+# 1) Run `./envVault.sh` 
+# 2) Follow the prompts to either encrypt your local .env files for git or decrypt the vault files for local development
+# 3) For encryption: Track the .env,local files and encrypt them by all the public keys of the team members. This will create encrypted versions in the .env folder that you can safely commit to git. using `Sops`
+# 4) For decryption: Use the same script to decrypt the vault files back to .env.local for local development. This requires that you have atleast one corresponding private key (configured in SOPS_AGE_SSH_PRIVATE_KEY_FILE) to access the encrypted files.
 
 # 1. THE KEY: Direct path to your github-specific private key
 export SOPS_AGE_SSH_PRIVATE_KEY_FILE="$HOME/.ssh/github/arch-soul"

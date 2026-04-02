@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # --- Advanced System Maintenance for Soul ---
-# System: Lenovo Ideapad Slim 3 | OS: Arch-Hyprland | FS: Btrfs
+# System:  OS: Arch-Hyprland | FS: Btrfs
 # Purpose: Full system health check, maintenance, and logging.
+# this script performs battery health checks, Btrfs maintenance, system upgrades, cleanup, and hardware error audits, while logging all actions for future reference.
 
 # 1. SETUP LOGGING
 LOG_DIR="$HOME/2_Resources/97_Logs/Arch"

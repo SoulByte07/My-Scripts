@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# /* ---- 💫 https://github.com/JaKooLit 💫 ---- */  ##
 # Screenshots scripts
 
 # variables

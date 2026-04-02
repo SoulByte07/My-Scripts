@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# You can mount multiple rclone remotes by adding more options to the menu and corresponding systemctl commands. Just make sure to create the appropriate systemd service files for each remote you want to manage.
 # Define the menu options separated by newlines
 OPTIONS="1. Mount Encrypted G-Drive\n3. Mount G-Drive\n2. Unmount Encrypted G-Drive\n4. Unmount G-Drive"
 

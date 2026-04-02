@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# usage: run this script to sync from local to Google Drive, with safety measures and logging and get notifications on completion or failure.
 # --- Configuration ---
 # Set the date first to use in paths
 DATE=$(date +%d-%b-%y_%H-%M)

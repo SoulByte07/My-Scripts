@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# /* ---- 💫 Soul's dwl Touchpad Toggle 💫 ---- */ 
-
+# A simple script to toggle the touchpad on/off by binding/unbinding the HID driver.
 # 1. Hardware ID (Find this with: ls /sys/bus/hid/drivers/hid-multitouch)
 # It usually looks like 0018:04F3:32B9.0001
-DEV_ID="0018:04F3:32B9.0001"
+DEV_ID="<your device ID here>"
 DRV_PATH="/sys/bus/hid/drivers/hid-multitouch"
 NOTIF_ICON="$HOME/.config/swaync/images/ja.png"
 

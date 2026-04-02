@@ -1,4 +1,8 @@
 #!/bin/sh
+# usage: run this script from a keybinding in your window manager or terminal to quickly switch between tmux sessions or create a new one using Rofi as the interface. It will also attempt to restore any previous sessions using tmux-resurrect if no sessions are currently active.
+# bugs: 
+# 1. it takes a moment to restore sessions on the first run if no tmux server is active, but this is necessary to ensure that the restored sessions are included in the menu. Subsequent runs will be much faster since the server is already running and sessions are restored.
+
 set -eu
 
 # --- 0. WAKE UP TMUX & RESTORE SESSIONS ---

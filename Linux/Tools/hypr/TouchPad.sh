@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# /* ---- 💫 https://github.com/JaKooLit 💫 ---- */  ##
 # For disabling touchpad.
 # Edit the Touchpad_Device on ~/.config/hypr/UserConfigs/Laptops.conf according to your system
 # use hyprctl devices to get your system touchpad device name
@@ -10,7 +9,7 @@
 
 # Get the device name from your Hyprland config or hardcode it here
 # It MUST match the name in 'hyprctl devices'
-TOUCHPAD_NAME="elan06fa:00-04f3:32b9-touchpad"
+TOUCHPAD_NAME="<your touchpad device id>"
 STATUS_FILE="$XDG_RUNTIME_DIR/touchpad.status"
 notif="$HOME/.config/swaync/images/ja.png"
 

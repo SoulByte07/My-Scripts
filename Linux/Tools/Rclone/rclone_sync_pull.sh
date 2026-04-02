@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# usage: run this script to sync from Google Drive to local, with safety measures and logging and get notifications on completion or failure.
 # --- Configuration ---
 DATE=$(date +%d-%b-%y_%H-%M)
 SOURCE="$HOME/4_Backups/0_Sync"

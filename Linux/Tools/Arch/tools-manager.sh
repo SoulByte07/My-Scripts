@@ -1,6 +1,7 @@
 #!/bin/bash
 # Description: Rofi dynamic script launcher with a custom theme
 # Requirements: rofi, findutils
+# usage: place this script in your ~/.local/bin/Tools directory and make it executable. It will scan for all executable files within $SCRIPT_DIR directory (including subdirectories) and present them in a Rofi menu. When you select a script, it will execute in the background. You can customize the theme by pointing THEME_PATH to your desired .rasi file.
 
 # 1. Define paths
 SCRIPT_DIR="$HOME/.local/bin/Tools"

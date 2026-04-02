@@ -1,5 +1,7 @@
 #!/bin/bash
 # Minimal Suspend Pomodoro - DWL Compatible
+# pomonodo timer dont need a dedicated app, just a simple script that can be run in the background. It will prompt you to take a break after a set amount of time, and if you choose to take a break, it will lock your screen and suspend your system. The script will automatically resume when you wake your system and unlock it.
+# Usage: add this to yout dwl deamons script ./dwl-pomodoro-timer.sh [WORK_MINS]
 
 WORK_MINS=${1:-25}
 BLURRED_WALLPAPER="$HOME/Pictures/wallpapers/Github/1351260.png"

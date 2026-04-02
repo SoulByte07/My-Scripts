@@ -2,6 +2,7 @@
 # Minimal Suspend Pomodoro
 # Input: ./pomo.sh 25
 # Expected Output: Completes work timer, asks to suspend, sleeps laptop, resumes timer on manual wake.
+# usage: add exec-once = ~/.config/hypr/scripts/hypr-pomodoro-timer.sh [working time] [break time] to your Hyprland config to start it on login
 
 WORK_MINS=${1:-25}
 
