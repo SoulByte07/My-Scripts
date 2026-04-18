@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
 env_vault.py
-Encrypt/decrypt env files with SOPS in team-safe way.
+Encrypt/decrypt env files with SOPS in team-safe way using atomic writes.
 
-Exit codes:
-  0 = success
-  2 = usage/input error
-  3 = dependency missing
-  4 = configuration/runtime precondition error
-  5 = one or more file operations failed
+Sample Input (CLI):
+    $ ./env_vault.py encrypt --vault-dir secrets --plain-dir locals
+
+Expected Output:
+    PROCESS locals/.env.staging -> secrets/.env.staging
+    OK   locals/.env.staging -> secrets/.env.staging
+    Done. mode=encrypt processed=1 skipped=0 failed=0
 """
 
 from __future__ import annotations
@@ -26,12 +27,9 @@ from typing import Iterable
 DEFAULT_AGE_KEY_FILE = "~/.ssh/shh_1221"
 DEFAULT_PLAIN_DIR = ".env.local"
 DEFAULT_VAULT_DIR = ".env"
-DEFAULT_RECURSIVE = False
-DEFAULT_OVERWRITE = True
-DEFAULT_CHMOD_600 = True
 
-SOPS_ENV_KEY = "SOPS_AGE_SSH_PRIVATE_KEY_FILE"
-
+# Standardized SOPS environment variable for age keys
+SOPS_ENV_KEY = "SOPS_AGE_KEY_FILE"
 
 class ExitCode(IntEnum):
     OK = 0
@@ -43,10 +41,6 @@ class ExitCode(IntEnum):
 
 def eprint(msg: str) -> None:
     print(msg, file=sys.stderr)
-
-
-def bool_from_args(value: bool | None, default: bool) -> bool:
-    return default if value is None else value
 
 
 def path_within(base: Path, candidate: Path) -> bool:
@@ -70,9 +64,7 @@ def list_source_files(src_dir: Path, recursive: bool) -> list[Path]:
     return files
 
 
-def build_destination(
-    src_root: Path, dst_root: Path, src_file: Path, recursive: bool
-) -> Path:
+def build_destination(src_root: Path, dst_root: Path, src_file: Path, recursive: bool) -> Path:
     rel = src_file.relative_to(src_root) if recursive else Path(src_file.name)
     dst = (dst_root / rel).resolve(strict=False)
     dst_root_resolved = dst_root.resolve(strict=False)
@@ -108,27 +100,33 @@ def run_sops_file(
         return True, ""
 
     dst_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Use a temporary file for atomic writes
+    tmp_dst_file = dst_file.with_suffix('.tmp')
 
-    cmd = ["sops", sops_mode_flag, "--output", str(dst_file), str(src_file)]
+    cmd = ["sops", sops_mode_flag, "--output", str(tmp_dst_file), str(src_file)]
     env = os.environ.copy()
     env[SOPS_ENV_KEY] = str(key_file)
 
     proc = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
 
     if proc.returncode != 0:
-        try:
-            if dst_file.exists():
-                dst_file.unlink()
-        except OSError:
-            pass
+        # Clean up the temporary file on failure, leaving the original destination intact
+        if tmp_dst_file.exists():
+            tmp_dst_file.unlink(missing_ok=True)
         err = (proc.stderr or "").strip() or f"sops exited with code {proc.returncode}"
         return False, err
 
+    # Apply permissions to the temp file before moving it into place
     if chmod_600:
         try:
-            os.chmod(dst_file, stat.S_IRUSR | stat.S_IWUSR)
+            os.chmod(tmp_dst_file, stat.S_IRUSR | stat.S_IWUSR)
         except OSError as exc:
-            return False, f"Could not set 0600 permissions on {dst_file}: {exc}"
+            tmp_dst_file.unlink(missing_ok=True)
+            return False, f"Could not set 0600 permissions on temp file: {exc}"
+
+    # Atomically replace the old file with the new one
+    tmp_dst_file.replace(dst_file)
 
     return True, ""
 
@@ -148,13 +146,9 @@ def process_mode(
     vault_dir.mkdir(parents=True, exist_ok=True)
 
     if mode == "encrypt":
-        source_dir = plain_dir
-        target_dir = vault_dir
-        sops_flag = "-e"
+        source_dir, target_dir, sops_flag = plain_dir, vault_dir, "-e"
     elif mode == "decrypt":
-        source_dir = vault_dir
-        target_dir = plain_dir
-        sops_flag = "-d"
+        source_dir, target_dir, sops_flag = vault_dir, plain_dir, "-d"
     else:
         eprint(f"Invalid mode: {mode}")
         return ExitCode.USAGE_ERROR
@@ -169,9 +163,7 @@ def process_mode(
         eprint(f"ERROR: {key_err}")
         return ExitCode.CONFIG_ERROR
 
-    failed = 0
-    processed = 0
-    skipped = 0
+    failed = processed = skipped = 0
 
     for src in files:
         try:
@@ -208,9 +200,7 @@ def process_mode(
 
 
 def interactive_mode_prompt() -> str:
-    print("Choose action:")
-    print("  1) Encrypt (default)")
-    print("  2) Decrypt")
+    print("Choose action:\n  1) Encrypt (default)\n  2) Decrypt")
     while True:
         choice = input("Enter choice [1/2]: ").strip()
         if choice in ("", "1"):
@@ -221,90 +211,22 @@ def interactive_mode_prompt() -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Encrypt/decrypt env files with SOPS safely."
-    )
-    parser.add_argument(
-        "command",
-        nargs="?",
-        choices=("encrypt", "decrypt"),
-        help="Operation mode. If omitted, interactive prompt is used when possible.",
-    )
-    parser.add_argument(
-        "--key-file",
-        default=DEFAULT_AGE_KEY_FILE,
-        help="Path to AGE SSH private key file.",
-    )
-    parser.add_argument(
-        "--plain-dir",
-        default=DEFAULT_PLAIN_DIR,
-        help="Directory with plaintext env files.",
-    )
-    parser.add_argument(
-        "--vault-dir",
-        default=DEFAULT_VAULT_DIR,
-        help="Directory with encrypted env files.",
-    )
+    parser = argparse.ArgumentParser(description="Encrypt/decrypt env files with SOPS safely.")
+    
+    parser.add_argument("command", nargs="?", choices=("encrypt", "decrypt"), help="Operation mode. If omitted, interactive prompt is used.")
+    parser.add_argument("--key-file", default=DEFAULT_AGE_KEY_FILE, help="Path to AGE SSH private key file.")
+    parser.add_argument("--plain-dir", default=DEFAULT_PLAIN_DIR, help="Directory with plaintext env files.")
+    parser.add_argument("--vault-dir", default=DEFAULT_VAULT_DIR, help="Directory with encrypted env files.")
 
-    parser.add_argument(
-        "--recursive",
-        dest="recursive",
-        action="store_true",
-        default=None,
-        help="Process directories recursively.",
-    )
-    parser.add_argument(
-        "--no-recursive",
-        dest="recursive",
-        action="store_false",
-        help="Disable recursive processing.",
-    )
-
-    parser.add_argument(
-        "--overwrite",
-        dest="overwrite",
-        action="store_true",
-        default=None,
-        help="Overwrite existing destination files.",
-    )
-    parser.add_argument(
-        "--no-overwrite",
-        dest="overwrite",
-        action="store_false",
-        help="Do not overwrite existing destination files.",
-    )
-
-    parser.add_argument(
-        "--chmod-600",
-        dest="chmod_600",
-        action="store_true",
-        default=None,
-        help="Set output file mode to 0600.",
-    )
-    parser.add_argument(
-        "--no-chmod-600",
-        dest="chmod_600",
-        action="store_false",
-        help="Do not force output file mode 0600.",
-    )
-
-    parser.add_argument(
-        "-i",
-        "--interactive",
-        action="store_true",
-        help="Force interactive menu if command is omitted.",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would run without executing sops.",
-    )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Verbose logs (never prints file contents).",
-    )
+    # Using BooleanOptionalAction for much cleaner boolean flag definitions (Python 3.9+)
+    parser.add_argument("--recursive", action=argparse.BooleanOptionalAction, default=False, help="Process directories recursively.")
+    parser.add_argument("--overwrite", action=argparse.BooleanOptionalAction, default=True, help="Overwrite existing destination files.")
+    parser.add_argument("--chmod-600", action=argparse.BooleanOptionalAction, default=True, help="Set output file mode to 0600.")
+    
+    parser.add_argument("-i", "--interactive", action="store_true", help="Force interactive menu if command is omitted.")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would run without executing sops.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logs (never prints file contents).")
+    
     return parser
 
 
@@ -314,11 +236,7 @@ def main() -> int:
 
     if not check_dependency_sops():
         eprint("ERROR: `sops` not available in PATH.")
-        return int(ExitCode.DEPENDENCY_MISSING)
-
-    recursive = bool_from_args(args.recursive, DEFAULT_RECURSIVE)
-    overwrite = bool_from_args(args.overwrite, DEFAULT_OVERWRITE)
-    chmod_600 = bool_from_args(args.chmod_600, DEFAULT_CHMOD_600)
+        return ExitCode.DEPENDENCY_MISSING
 
     key_file = Path(args.key_file).expanduser().resolve(strict=False)
     plain_dir = Path(args.plain_dir).expanduser().resolve(strict=False)
@@ -330,16 +248,16 @@ def main() -> int:
             command = interactive_mode_prompt()
         else:
             eprint("ERROR: command required in non-interactive mode: encrypt|decrypt")
-            return int(ExitCode.USAGE_ERROR)
+            return ExitCode.USAGE_ERROR
 
     result = process_mode(
         mode=command,
         key_file=key_file,
         plain_dir=plain_dir,
         vault_dir=vault_dir,
-        recursive=recursive,
-        overwrite=overwrite,
-        chmod_600=chmod_600,
+        recursive=args.recursive,
+        overwrite=args.overwrite,
+        chmod_600=args.chmod_600,
         dry_run=args.dry_run,
         verbose=args.verbose,
     )
@@ -350,5 +268,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except KeyboardInterrupt:
-        eprint("Interrupted by user.")
+        eprint("\nInterrupted by user.")
         raise SystemExit(130)
