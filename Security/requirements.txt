@@ -1,0 +1,6 @@
+# No external Python libraries required. 
+# All logic uses the Python Standard Library.
+#
+# Requirements:
+# Python >= 3.9
+# System binary: sops (https://github.com/getsops/sops)
