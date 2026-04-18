@@ -1,3 +1,24 @@
+"""
+This script reads an Excel file, cleans the data, and imports it into a SQLite database.
+requirements:
+- uv (for managing dependencies)
+- pandas
+- sqlalchemy
+- openpyxl (for reading Excel files)
+- sqlite3 (comes with Python)
+To run:
+1. Ensure you have the required libraries installed:
+    1.1 init the folder with uv
+        `uv init` 
+    2.2 install dependencies
+        `uv add pandas sqlalchemy openpyxl`
+2. Place your Excel file (e.g., 'Retail.xlsx') in the 'DataSet
+3. Run the script:
+    `uv run xlsx_to_sql.py`
+
+"""
+
+
 import pandas as pd
 from sqlalchemy import create_engine
 from pathlib import Path
