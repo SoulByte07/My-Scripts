@@ -1,32 +1,35 @@
-#!/bin/sh
-# tv-cheat-sheet.sh
-# Pick a cheat entry via television, copy command, and preview it.
-# Usage: ./tv-cheat-sheet.sh
+#!/usr/bin/env bash
 
-set -u
+# 1. Pick the app
+app=$(tv cheat-sheet-apps)
+[ -z "$app" ] && exit 0
 
-cheat_dir="$HOME/.config/cheat/cheatsheets"
+sheet_path="$HOME/.config/cheat/cheatsheets/community/$app"
 
-app="$(tv cheat-sheet-apps || true)"
-[ -n "$app" ] || exit 0
+# 2. Pick the command (Merged Desc + Command)
+# Using '  »  ' as a unique separator
+selection=$(awk '/^#/{desc=$0; next} /^[[:space:]]*$/ {next} {if(desc!="") print desc "  »  " $0; desc=""}' "$sheet_path" | tv cheat-sheet-lines)
 
-sheet_path="$(find "$cheat_dir" -type f -name "$app" -print -quit 2>/dev/null || true)"
-[ -n "$sheet_path" ] || exit 0
-
-selection="$(awk '/^#/{desc=$0; next} /^[[:space:]]*$/ {next} {if(desc!="") print desc "  »  " $0; desc=""}' "$sheet_path" | tv cheat-sheet-lines || true)"
-[ -n "$selection" ] || exit 0
-
-desc_text="${selection%%  »  *}"
-command_text="${selection#*  »  }"
-
-printf '%s' "$command_text" | wl-copy
-notify-send 'Cheat Sheet' "Copied: $command_text"
-
-clear
-printf '\033[90m----------------------------------------------------------------------\033[0m\n'
-printf '\033[1;33m%s\033[0m\n' "$desc_text"
-printf '\033[1;32m%s\033[0m\n' "$command_text"
-printf '\033[90m----------------------------------------------------------------------\033[0m\n\n'
-printf '\033[1;30mPress Enter to close...\033[0m\n'
-
-IFS= read -r _
+# 3. If a selection was made
+if [ -n "$selection" ]; then
+    # Extract just the command part (everything after the »)
+    # We use '  »  ' as the delimiter
+    command_text=$(echo "$selection" | awk -F '  »  ' '{print $2}')
+    
+    # Copy to Wayland clipboard
+    echo "$command_text" | wl-copy
+    
+    # Send a quick desktop notification
+    notify-send "Cheat Sheet" "Copied: $command_text"
+    
+    # 4. Display for reading
+    clear
+    echo -e "\033[1;33m----------------------------------------------------------------------\033[0m"
+    echo "$selection"
+    echo -e "\033[1;33m----------------------------------------------------------------------\033[0m"
+    echo ""
+    echo -e "\033[1;30mPress any key to close...\033[0m"
+    
+    # Keeps the terminal open until you acknowledge
+    read -n 1 -s -r
+fi
