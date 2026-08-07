@@ -5,7 +5,8 @@ import yt_dlp
 def extract_playlist_urls(playlist_url, output_file):
     # Ensure the file exists
     if not os.path.exists(output_file):
-        open(output_file, 'w').close()
+        with open(output_file, 'w', encoding='utf-8') as f:
+            pass
 
     # yt-dlp options
     ydl_opts = {
@@ -19,8 +20,8 @@ def extract_playlist_urls(playlist_url, output_file):
             print(f"Fetching playlist data from: {playlist_url}")
             info = ydl.extract_info(playlist_url, download=False)
             
-            if 'entries' not in info:
-                print("Error: The provided URL does not seem to be a valid playlist.")
+            if not info or 'entries' not in info:
+                print("Error: The provided URL does not seem to be a valid playlist or could not be accessed.")
                 return
 
             urls = []
