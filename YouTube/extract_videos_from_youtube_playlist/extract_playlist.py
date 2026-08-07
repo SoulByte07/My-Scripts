@@ -1,7 +1,12 @@
 import sys
+import os
 import yt_dlp
 
 def extract_playlist_urls(playlist_url, output_file):
+    # Ensure the file exists
+    if not os.path.exists(output_file):
+        open(output_file, 'w').close()
+
     # yt-dlp options
     ydl_opts = {
         'extract_flat': 'in_playlist', # Don't download videos, just extract metadata
